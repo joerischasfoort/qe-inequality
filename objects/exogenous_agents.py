@@ -19,6 +19,7 @@ class CBVariables:
         self.currency = [currency] # The quantities of currencies held
         self.asset_demand = [asset_demand]
         self.asset_target = asset_target
+        self.active_orders = []
 
 
 class CBParameters:

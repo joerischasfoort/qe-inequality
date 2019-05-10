@@ -71,7 +71,18 @@ def init_objects_qe_ineq(parameters, seed):
         currency += np.array(cb_assets[idx])
 
     asset_demand = [0 for a in assets]
-    asset_target = [0 for a in assets]
+
+    # Determine QE volume
+    QE_periods = parameters["qe_end"] - parameters["qe_start"]
+    total_QE_volume = parameters["qe_perc_size"] * sum(parameters["init_assets"]) * parameters["n_traders"]  # TODO does this amount make sense?
+    period_volume = total_QE_volume / QE_periods
+
+    asset_target = [0 for t in range(parameters['ticks'])] #TODO fix this, and debug
+    for t in range(parameters['ticks']):
+        if t in range(parameters["qe_start"], parameters["qe_end"]):
+            asset_target[t] = asset_target[t-1] + period_volume
+        elif t > parameters["qe_end"]:
+            asset_target[t] = asset_target[t - 1]
 
     cb_pars = CBParameters(0.0)
     cb_vars = CBVariables(assets, currency, asset_demand, asset_target)
@@ -82,7 +93,7 @@ def init_objects_qe_ineq(parameters, seed):
     order_books = []
     for a in range(len(assets)):
         order_book = LimitOrderBook(a, parameters['fundamental_values'][a], parameters["std_fundamentals"][a],
-                                   max_horizon, parameters['ticks'])
+                                    max_horizon, parameters['ticks'])
         order_book.returns = list(historical_stock_returns[a])
         order_books.append(order_book)
 
