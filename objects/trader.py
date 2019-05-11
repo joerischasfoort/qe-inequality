@@ -53,7 +53,7 @@ class TraderVariables:
     Holds the initial variables for the traders
     """
     def __init__(self, weight_fundamentalist, weight_chartist, weight_random, c_share_strat,
-                 money, assets, covariance_matrix, init_prices):
+                 money, assets, covariance_matrix, init_prices, active_orders):
         """
         Initializes variables for the trader
         :param weight_fundamentalist: float fundamentalist expectation component
@@ -67,9 +67,9 @@ class TraderVariables:
         self.c_share_strat = c_share_strat
         self.money = [money]
         self.assets = assets
-        self.wealth = [money + sum(np.array(assets) * np.array(init_prices))]
+        self.wealth = [money + sum(np.array([a[-1] for a in assets]) * np.array(init_prices))]
         self.covariance_matrix = covariance_matrix
-        self.active_orders = []
+        self.active_orders = active_orders
 
 
 class TraderParameters:

@@ -36,22 +36,25 @@ def init_objects_qe_ineq(parameters, seed):
     max_horizon = parameters['horizon'] * 2  # this is the max horizon of an agent if 100% fundamentalist
     historical_stock_returns = [np.random.normal(0, parameters["std_fundamentals"][i], max_horizon) for i in range(len(assets))]
 
+    total_buy_able_assets = 0
     for idx in range(n_traders):
         weight_fundamentalist = list(agent_points[idx]).count('f') / float(len(agent_points[idx]))
         weight_chartist = list(agent_points[idx]).count('c') / float(len(agent_points[idx]))
         weight_random = list(agent_points[idx]).count('r') / float(len(agent_points[idx]))
 
-        init_stocks = [int(np.random.uniform(0, parameters["init_assets"][i])) for i in range(len(assets))]
+        init_stocks = [[int(np.random.uniform(0, parameters["init_assets"][i]))] for i in range(len(assets))]
+        total_buy_able_assets += init_stocks[parameters["qe_asset_index"]][-1]
         init_money = np.random.uniform(0, (sum(parameters["init_assets"]) * sum(parameters['fundamental_values'])))
 
         c_share_strat = div0(weight_chartist, (weight_fundamentalist + weight_chartist))
 
         # initialize co_variance_matrix
         init_covariance_matrix = calculate_covariance_matrix(historical_stock_returns, parameters["std_fundamentals"])
+        init_active_orders = [[] for a in assets]
 
         lft_vars = TraderVariables(weight_fundamentalist, weight_chartist, weight_random, c_share_strat,
                                    init_money, init_stocks, init_covariance_matrix,
-                                   parameters['fundamental_values'])
+                                   parameters['fundamental_values'], init_active_orders)
 
         # determine heterogeneous horizon and risk aversion based on
         individual_horizon = np.random.randint(10, parameters['horizon'])
@@ -74,14 +77,14 @@ def init_objects_qe_ineq(parameters, seed):
 
     # Determine QE volume
     QE_periods = parameters["qe_end"] - parameters["qe_start"]
-    total_QE_volume = parameters["qe_perc_size"] * sum(parameters["init_assets"]) * parameters["n_traders"]  # TODO does this amount make sense?
-    period_volume = total_QE_volume / QE_periods
+    total_QE_volume = parameters["qe_perc_size"] * total_buy_able_assets  # TODO does this amount make sense?
+    period_volume = int(total_QE_volume / QE_periods)
 
     asset_target = [0 for t in range(parameters['ticks'])] #TODO fix this, and debug
     for t in range(parameters['ticks']):
         if t in range(parameters["qe_start"], parameters["qe_end"]):
             asset_target[t] = asset_target[t-1] + period_volume
-        elif t > parameters["qe_end"]:
+        elif t >= parameters["qe_end"]:
             asset_target[t] = asset_target[t - 1]
 
     cb_pars = CBParameters(0.0)

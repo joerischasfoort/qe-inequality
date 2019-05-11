@@ -15,7 +15,7 @@ parameters = {"fundamental_values": [166, 105],
               "fundamentalist_horizon_multiplier": 0.2,
               "trades_per_tick": 3, "mutation_intensity": 0.05,
               "average_learning_ability": 0.5,
-              "qe_perc_size": 0.0, "qe_start": 100, "qe_end": 110, "qe_asset_index":0}
+              "qe_perc_size": 0.1, "qe_start": 100, "qe_end": 110, "qe_asset_index": 0}
 
 # 2 initialise model objects
 traders, central_bank, orderbook = init_objects_qe_ineq(parameters, seed=0)

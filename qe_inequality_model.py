@@ -17,15 +17,15 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
     np.random.seed(seed)
     assets = ['asset_' + str(a) for a in range(len(parameters["fundamental_values"]))]
 
-    fundamentals = [val for val in parameters["fundamental_values"]]
-    qe_asset_index = parameters["qe_asset_index"]
+    fundamentals = [[val] for val in parameters["fundamental_values"]]
 
     for idx, ob in enumerate(orderbooks):
         ob.tick_close_price.append(fundamentals[idx][-1])
 
     traders_by_wealth = [t for t in traders]
 
-    for tick in range(parameters['horizon'] + 1, parameters["ticks"] + parameters['horizon'] + 1): # for init history
+    for tick in range(parameters['horizon'] + 1, parameters["ticks"] + parameters['horizon'] + 1):
+        qe_tick = tick - parameters['horizon'] - 1  # correcting for the memory period necessary for traders
         if tick == parameters['horizon'] + 1:
             print('Start of simulation ', seed)
 
@@ -62,14 +62,14 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                             central_bank.var.active_orders[i] = []
 
                 # determine demand
-                cb_demand = central_bank.var.assets[qe_asset_index][tick] - central_bank.var.asset_target[tick] #TODO initialize asset target
+                cb_demand = central_bank.var.assets[parameters["qe_asset_index"]][qe_tick] - central_bank.var.asset_target[qe_tick] #TODO initialize asset target
 
                 # Submit QE orders:
                 if cb_demand > 0:
-                    bid = orderbooks[qe_asset_index].add_bid(orderbooks[qe_asset_index].lowest_ask_price, cb_demand, central_bank)
+                    bid = orderbooks[parameters["qe_asset_index"]].add_bid(orderbooks[parameters["qe_asset_index"]].lowest_ask_price, cb_demand, central_bank)
                     central_bank.var.active_orders[i].append(bid)
                 elif cb_demand < 0:
-                    ask = orderbooks[qe_asset_index].add_ask(orderbooks[qe_asset_index].highest_bid_price, cb_demand, central_bank)
+                    ask = orderbooks[parameters["qe_asset_index"]].add_ask(orderbooks[parameters["qe_asset_index"]].highest_bid_price, cb_demand, central_bank)
                     central_bank.var.active_orders[i].append(ask)
 
             # END QE ##############################################################################################
@@ -78,12 +78,13 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
             active_traders = random.sample(traders, int((parameters['trader_sample_size'])))
 
             mid_prices = [np.mean([ob.highest_bid_price, ob.lowest_ask_price]) for ob in orderbooks]
-            fundamental_components = [np.log(fundamentals[i][-1] / mid_prices[i]) for i in range(len())]
+            fundamental_components = [np.log(fundamentals[i][-1] / mid_prices[i]) for i in range(len(assets))]
 
             for i, ob in enumerate(orderbooks):
                 ob.returns[-1] = (mid_prices[i] - ob.tick_close_price[-2]) / ob.tick_close_price[-2]
+
             chartist_components = [np.cumsum(ob.returns[:-len(ob.returns) - 1:-1]
-                                           ) / np.arange(1., float(len(ob.returns) + 1)) for ob in orderbooks]
+                                             ) / np.arange(1., float(len(ob.returns) + 1)) for ob in orderbooks]
 
             for trader in active_traders:
                 # Cancel any active orders
@@ -119,7 +120,7 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
 
                 # Expectation formation
                 fcast_prices = []
-                for i in range(len(assets)):
+                for i in range(len(assets)): #TODO fix below exp returns per stock asset
                     trader.exp.returns['stocks'][i] = (
                         trader.var.weight_fundamentalist[-1] * np.divide(1, float(trader.par.horizon) * parameters["fundamentalist_horizon_multiplier"]) * fundamental_components[i] +
                         trader.var.weight_chartist[-1] * chartist_components[i][trader.par.horizon - 1] +
