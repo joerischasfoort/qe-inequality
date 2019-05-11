@@ -16,7 +16,9 @@ def portfolio_optimization(trader, day):
     expected_return_assets = np.zeros((len(covariance_assets)))
 
     # compute the risk aversion matrix
-    risk_aversion_mat = pd.DataFrame((np.zeros((2, 2)) + trader.par.risk_aversion) , index=covariance_assets.columns, columns=covariance_assets.columns)
+    risk_aversion_mat = pd.DataFrame((np.zeros((len(covariance_assets),
+                                                len(covariance_assets))) + trader.par.risk_aversion)
+                                     , index=covariance_assets.columns, columns=covariance_assets.columns)
 
     # multiply covariance with asset specific risk aversion
     covariance_assets = np.multiply(covariance_assets, risk_aversion_mat)

@@ -52,7 +52,7 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
         for turn in range(parameters["trades_per_tick"]):
             # Allow the central bank to do Quantitative Easing ####################################################
             # TODO new debug ######################################################################################
-            if tick in range(parameters["qe_start"], parameters["qe_end"]):
+            if qe_tick in range(parameters["qe_start"], parameters["qe_end"]):
                 print('QE TIME')
                 # Cancel any active orders
                 for i, ob in enumerate(orderbooks):
@@ -62,7 +62,7 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                             central_bank.var.active_orders[i] = []
 
                 # determine demand
-                cb_demand = central_bank.var.assets[parameters["qe_asset_index"]][qe_tick] - central_bank.var.asset_target[qe_tick] #TODO initialize asset target
+                cb_demand = int(central_bank.var.asset_target[qe_tick] - central_bank.var.assets[parameters["qe_asset_index"]][qe_tick])
 
                 # Submit QE orders:
                 if cb_demand > 0:
@@ -120,12 +120,12 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
 
                 # Expectation formation
                 fcast_prices = []
-                for i in range(len(assets)): #TODO fix below exp returns per stock asset
-                    trader.exp.returns['stocks'][i] = (
+                for i, a in enumerate(assets): #TODO fix below exp returns per stock asset
+                    trader.exp.returns[a] = (
                         trader.var.weight_fundamentalist[-1] * np.divide(1, float(trader.par.horizon) * parameters["fundamentalist_horizon_multiplier"]) * fundamental_components[i] +
                         trader.var.weight_chartist[-1] * chartist_components[i][trader.par.horizon - 1] +
                         trader.var.weight_random[-1] * noise_components[i])
-                    fcast_prices.append(mid_prices[i] * np.exp(trader.exp.returns['stocks'][i]))
+                    fcast_prices.append(mid_prices[i] * np.exp(trader.exp.returns[a]))
 
                 observed_returns = [ob.returns[-trader.par.horizon:] for ob in orderbooks]
                 trader.var.covariance_matrix = calculate_covariance_matrix(observed_returns, parameters["std_fundamentals"]) #TODo debug, does this work as intended?
@@ -134,29 +134,31 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                 ideal_trader_weights = portfolio_optimization(trader, tick) #TODO debug, does this still work as intended
 
                 # Determine price and volume
-                for i, ob in orderbooks:
+                for i, ob in enumerate(orderbooks):
                     trader_price = np.random.normal(fcast_prices[i], trader.par.spread)
-                    position_change = (ideal_trader_weights['stocks'][i] * (trader.var.assets[i][-1] * trader_price + trader.var.money[-1])
+                    position_change = (ideal_trader_weights[assets[i]] * (trader.var.assets[i][-1] * trader_price + trader.var.money[-1])
                               ) - (trader.var.assets[i][-1] * trader_price)
                     volume = int(div0(position_change, trader_price))
 
                     # Trade:
                     if volume > 0:
+                        volume = min(volume, int(div0(trader.var.money[-1], trader_price))) # the trader can only buy new stocks with money
                         bid = ob.add_bid(trader_price, volume, trader)
                         trader.var.active_orders[i].append(bid)
                     elif volume < 0:
+                        volume = max(volume, -trader.var.assets[i][-1])  # the trader can only sell as much assets as it owns
                         ask = ob.add_ask(trader_price, -volume, trader)
                         trader.var.active_orders[i].append(ask)
 
             # Match orders in the order-book
-            for ob in orderbooks:
+            for i, ob in enumerate(orderbooks):
                 while True:
                     matched_orders = ob.match_orders()
                     if matched_orders is None:
                         break
                     # execute trade
-                    matched_orders[3].owner.sell(matched_orders[1], matched_orders[0] * matched_orders[1])
-                    matched_orders[2].owner.buy(matched_orders[1], matched_orders[0] * matched_orders[1])
+                    matched_orders[3].owner.sell(matched_orders[1], matched_orders[0] * matched_orders[1], i, qe_tick)
+                    matched_orders[2].owner.buy(matched_orders[1], matched_orders[0] * matched_orders[1], i, qe_tick)
 
         for i, ob in enumerate(orderbooks):
             # Clear and update order-book history

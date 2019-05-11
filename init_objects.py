@@ -64,11 +64,13 @@ def init_objects_qe_ineq(parameters, seed):
 
         lft_params = TraderParameters(individual_horizon, individual_risk_aversion,
                                       individual_learning_ability, parameters['spread_max'])
-        lft_expectations = TraderExpectations(parameters['fundamental_values'])
+        exp_returns = {a: 0.0 for a in assets}
+        exp_returns['money'] = 0.0
+        lft_expectations = TraderExpectations(parameters['fundamental_values'], exp_returns)
         traders.append(Trader(idx, lft_vars, lft_params, lft_expectations))
 
     # initialize central bank with zero assets
-    cb_assets = [[0 * parameters['fundamental_values'][i] for t in range(parameters["ticks"])] for i in range(len(assets))]
+    cb_assets = [[0.0 for t in range(parameters["ticks"])] for i in range(len(assets))]
     currency = np.zeros(parameters["ticks"])
     for idx, asset in enumerate(assets):
         currency += np.array(cb_assets[idx])
@@ -81,6 +83,7 @@ def init_objects_qe_ineq(parameters, seed):
     period_volume = int(total_QE_volume / QE_periods)
 
     asset_target = [0 for t in range(parameters['ticks'])] #TODO fix this, and debug
+    init_active_orders_cb = [[] for a in assets]
     for t in range(parameters['ticks']):
         if t in range(parameters["qe_start"], parameters["qe_end"]):
             asset_target[t] = asset_target[t-1] + period_volume
@@ -88,7 +91,7 @@ def init_objects_qe_ineq(parameters, seed):
             asset_target[t] = asset_target[t - 1]
 
     cb_pars = CBParameters(0.0)
-    cb_vars = CBVariables(assets, currency, asset_demand, asset_target)
+    cb_vars = CBVariables(cb_assets, currency, asset_demand, asset_target, init_active_orders_cb)
 
     central_bank = CentralBank(cb_vars, cb_pars)
 
