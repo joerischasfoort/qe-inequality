@@ -16,7 +16,7 @@ def init_objects_qe_ineq(parameters, seed):
     np.random.seed(seed)
     random.seed(seed)
 
-    assets = ['asset_' + str(a) for a in range(len(parameters["fundamental_values"]))]
+    assets = [parameters["asset_types"][a] + str(a) for a in range(len(parameters["fundamental_values"]))]#['asset_' + str(a) for a in range(len(parameters["fundamental_values"]))]
 
     traders = []
     n_traders = parameters["n_traders"]
@@ -49,7 +49,7 @@ def init_objects_qe_ineq(parameters, seed):
         c_share_strat = div0(weight_chartist, (weight_fundamentalist + weight_chartist))
 
         # initialize co_variance_matrix
-        init_covariance_matrix = calculate_covariance_matrix(historical_stock_returns, parameters["std_fundamentals"])
+        init_covariance_matrix = calculate_covariance_matrix(historical_stock_returns, parameters)
         init_active_orders = [[] for a in assets]
 
         lft_vars = TraderVariables(weight_fundamentalist, weight_chartist, weight_random, c_share_strat,
@@ -79,10 +79,10 @@ def init_objects_qe_ineq(parameters, seed):
 
     # Determine QE volume
     QE_periods = parameters["qe_end"] - parameters["qe_start"]
-    total_QE_volume = parameters["qe_perc_size"] * total_buy_able_assets  # TODO does this amount make sense?
+    total_QE_volume = parameters["qe_perc_size"] * total_buy_able_assets
     period_volume = int(total_QE_volume / QE_periods)
 
-    asset_target = [0 for t in range(parameters['ticks'])] #TODO fix this, and debug
+    asset_target = [0 for t in range(parameters['ticks'])]
     init_active_orders_cb = [[] for a in assets]
     for t in range(parameters['ticks']):
         if t in range(parameters["qe_start"], parameters["qe_end"]):

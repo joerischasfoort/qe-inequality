@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from functions.portfolio_optimization import *
-from functions.helpers import calculate_covariance_matrix, div0
+from functions.helpers import calculate_covariance_matrix, div0, ornstein_uhlenbeck_evolve
 
 
 def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
@@ -15,7 +15,7 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
     """
     random.seed(seed)
     np.random.seed(seed)
-    assets = ['asset_' + str(a) for a in range(len(parameters["fundamental_values"]))]
+    assets = [parameters["asset_types"][a] + str(a) for a in range(len(parameters["fundamental_values"]))]
 
     fundamentals = [[val] for val in parameters["fundamental_values"]]
 
@@ -26,6 +26,7 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
 
     for tick in range(parameters['horizon'] + 1, parameters["ticks"] + parameters['horizon'] + 1):
         qe_tick = tick - parameters['horizon'] - 1  # correcting for the memory period necessary for traders
+
         if tick == parameters['horizon'] + 1:
             print('Start of simulation ', seed)
 
@@ -50,12 +51,14 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
 
         # evolve the fundamental value via random walk process
         for i, f in enumerate(fundamentals):
-            f.append(max(f[-1] + parameters["std_fundamentals"][i] * np.random.randn(), 0.1))
+            if 'bond' in assets[i]:
+                f.append(max(ornstein_uhlenbeck_evolve(f[-1], parameters["fundamental_values"][i], parameters["std_fundamentals"][i], parameters['bond_mean_reversion'], seed), 0.1))
+            else:
+                f.append(max(f[-1] + parameters["std_fundamentals"][i] * np.random.randn(), 0.1))
 
         # allow for multiple trades in one day
         for turn in range(parameters["trades_per_tick"]):
             # Allow the central bank to do Quantitative Easing ####################################################
-            # TODO new debug ######################################################################################
             if qe_tick in range(parameters["qe_start"], parameters["qe_end"]):
                 print('QE TIME = ', qe_tick)
                 # Cancel any active orders
@@ -75,8 +78,6 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                 elif cb_demand < 0:
                     ask = orderbooks[parameters["qe_asset_index"]].add_ask(orderbooks[parameters["qe_asset_index"]].highest_bid_price, cb_demand, central_bank)
                     central_bank.var.active_orders[parameters["qe_asset_index"]].append(ask)
-
-            #TODO maybe match the order right away?
 
             # END QE ##############################################################################################
 
@@ -134,7 +135,8 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                     fcast_prices.append(mid_prices[i] * np.exp(trader.exp.returns[a]))
 
                 observed_returns = [ob.returns[-trader.par.horizon:] for ob in orderbooks]
-                trader.var.covariance_matrix = calculate_covariance_matrix(observed_returns, parameters["std_fundamentals"]) #TODo debug, does this work as intended?
+
+                trader.var.covariance_matrix = calculate_covariance_matrix(observed_returns, parameters) #TODo debug, does this work as intended?
 
                 # employ portfolio optimization algo
                 ideal_trader_weights = portfolio_optimization(trader, tick) #TODO debug, does this still work as intended

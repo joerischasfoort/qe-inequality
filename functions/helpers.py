@@ -3,23 +3,30 @@ from numpy import log, polyfit, sqrt, std, subtract
 import pandas as pd
 import math
 import scipy.stats as stats
+import random
 
 
-def calculate_covariance_matrix(historical_stock_returns, base_historical_variance):
+def calculate_covariance_matrix(historical_stock_returns, params):
     """
     Calculate the covariance matrix of a safe asset (money) provided stock returns
     :param historical_stock_returns: list of historical stock returns
     :return: DataFrame of the covariance matrix of stocks and money (in practice just the variance).
     """
-    assets = ['asset_' + str(a) for a in range(len(historical_stock_returns))]
-    assets.append('money')
-    historical_stock_returns.append(np.array([0.0 for x in range(len(historical_stock_returns[0]))]))
-    covariances = np.cov(np.array(historical_stock_returns))
+    #assets = ['asset_' + str(a) for a in range(len(historical_stock_returns))]
+    names = [params["asset_types"][a] + str(a) for a in range(len(params["fundamental_values"]))]
+    names.append('money')
+    h_stock_rets = historical_stock_returns.copy()
+
+    if len(historical_stock_returns) > 2:
+        print('buggg')
+
+    h_stock_rets.append(np.array([0.0 for x in range(len(h_stock_rets[0]))]))
+    covariances = np.cov(np.array(h_stock_rets))
 
     #if covariances.sum().sum() == 0.:
         # If the price is stationary, revert to base historical variance
         #covariances[0][0] = base_historical_variance
-    return pd.DataFrame(covariances, index=assets, columns=assets)
+    return pd.DataFrame(covariances, index=names, columns=names)
 
 
 def div0(numerator, denominator):
@@ -166,3 +173,26 @@ def confidence_interval(data, av):
     sigma = sample_stdev/math.sqrt(len(data))
     return stats.t.interval(alpha = 0.95, df= 24, loc=av, scale=sigma)
 
+#
+# def ornstein_uhlenbeck_evolve(init_level, average_level, sigma, mean_reversion, seed):
+#     random.seed(seed)
+#     np.random.seed(seed)
+#     error = np.random.normal(0, sigma)
+#     next_level = np.exp(np.log((init_level) + error + mean_reversion * (np.log(average_level) - np.log(init_level))))
+#     if (next_level <= 0) or (np.isnan(next_level)):
+#         return init_level
+#     else:
+#         return next_level
+
+
+def ornstein_uhlenbeck_evolve(init_level, previous_level, sigma, mean_reversion, seed):
+    fundamental_value = [previous_level]
+    random.seed(seed)
+    np.random.seed(seed)
+
+    error = np.random.normal(0, sigma)
+    new_dr = np.exp(np.log((fundamental_value[-1]) + error + mean_reversion * (np.log(init_level) - np.log(fundamental_value[-1]))))
+    if new_dr <= 0 or np.isnan(new_dr) == True:
+        new_dr = fundamental_value[-1]
+
+    return new_dr
