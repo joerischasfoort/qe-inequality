@@ -21,6 +21,6 @@ parameters = {"fundamental_values": [166, 105],
 traders, central_bank, orderbook = init_objects_qe_ineq(parameters, seed=0)
 
 # 3 simulate model
-traders, orderbook = qe_ineq_model(traders, central_bank, orderbook, parameters, seed=0)
+traders, central_bank, orderbook = qe_ineq_model(traders, central_bank, orderbook, parameters, seed=0)
 
 print("The simulations took", time.time() - start_time, "to run")

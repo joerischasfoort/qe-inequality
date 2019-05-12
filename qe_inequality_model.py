@@ -41,6 +41,10 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
             trader.var.weight_chartist.append(trader.var.weight_chartist[-1])
             trader.var.weight_random.append(trader.var.weight_random[-1])
 
+        # update money and assets for central bank
+        central_bank.var.assets[parameters["qe_asset_index"]][qe_tick] = central_bank.var.assets[parameters["qe_asset_index"]][qe_tick - 1]
+        central_bank.var.currency[qe_tick] = central_bank.var.currency[qe_tick - 1]
+
         # sort the traders by wealth to
         traders_by_wealth.sort(key=lambda x: x.var.wealth[-1], reverse=True)
 
@@ -53,7 +57,7 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
             # Allow the central bank to do Quantitative Easing ####################################################
             # TODO new debug ######################################################################################
             if qe_tick in range(parameters["qe_start"], parameters["qe_end"]):
-                print('QE TIME')
+                print('QE TIME = ', qe_tick)
                 # Cancel any active orders
                 for i, ob in enumerate(orderbooks):
                     if central_bank.var.active_orders[i]:
@@ -67,10 +71,12 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                 # Submit QE orders:
                 if cb_demand > 0:
                     bid = orderbooks[parameters["qe_asset_index"]].add_bid(orderbooks[parameters["qe_asset_index"]].lowest_ask_price, cb_demand, central_bank)
-                    central_bank.var.active_orders[i].append(bid)
+                    central_bank.var.active_orders[parameters["qe_asset_index"]].append(bid)
                 elif cb_demand < 0:
                     ask = orderbooks[parameters["qe_asset_index"]].add_ask(orderbooks[parameters["qe_asset_index"]].highest_bid_price, cb_demand, central_bank)
-                    central_bank.var.active_orders[i].append(ask)
+                    central_bank.var.active_orders[parameters["qe_asset_index"]].append(ask)
+
+            #TODO maybe match the order right away?
 
             # END QE ##############################################################################################
 
@@ -157,6 +163,8 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                     if matched_orders is None:
                         break
                     # execute trade
+                    if matched_orders[2].owner == central_bank or matched_orders[3].owner == central_bank:
+                        print('hold your horses QE is working')
                     matched_orders[3].owner.sell(matched_orders[1], matched_orders[0] * matched_orders[1], i, qe_tick)
                     matched_orders[2].owner.buy(matched_orders[1], matched_orders[0] * matched_orders[1], i, qe_tick)
 
@@ -165,4 +173,4 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
             ob.cleanse_book()
             ob.fundamental = fundamentals[i]
 
-    return traders, orderbooks
+    return traders, central_bank, orderbooks

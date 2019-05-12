@@ -44,7 +44,7 @@ def init_objects_qe_ineq(parameters, seed):
 
         init_stocks = [[int(np.random.uniform(0, parameters["init_assets"][i]))] for i in range(len(assets))]
         total_buy_able_assets += init_stocks[parameters["qe_asset_index"]][-1]
-        init_money = np.random.uniform(0, (sum(parameters["init_assets"]) * sum(parameters['fundamental_values'])))
+        init_money = np.random.uniform(0, (sum([s[-1] for s in init_stocks]) * sum(parameters['fundamental_values'])))
 
         c_share_strat = div0(weight_chartist, (weight_fundamentalist + weight_chartist))
 
