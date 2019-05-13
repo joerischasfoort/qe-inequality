@@ -187,8 +187,6 @@ def confidence_interval(data, av):
 
 def ornstein_uhlenbeck_evolve(init_level, previous_level, sigma, mean_reversion, seed):
     fundamental_value = [previous_level]
-    random.seed(seed)
-    np.random.seed(seed)
 
     error = np.random.normal(0, sigma)
     new_dr = np.exp(np.log((fundamental_value[-1]) + error + mean_reversion * (np.log(init_level) - np.log(fundamental_value[-1]))))

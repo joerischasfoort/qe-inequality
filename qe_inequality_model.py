@@ -52,7 +52,7 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
         # evolve the fundamental value via random walk process
         for i, f in enumerate(fundamentals):
             if 'bond' in assets[i]:
-                f.append(max(ornstein_uhlenbeck_evolve(f[-1], parameters["fundamental_values"][i], parameters["std_fundamentals"][i], parameters['bond_mean_reversion'], seed), 0.1))
+                f.append(max(ornstein_uhlenbeck_evolve(parameters["fundamental_values"][i], f[-1], parameters["std_fundamentals"][i], parameters['bond_mean_reversion'], seed), 0.1))
             else:
                 f.append(max(f[-1] + parameters["std_fundamentals"][i] * np.random.randn(), 0.1))
 
@@ -60,7 +60,6 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
         for turn in range(parameters["trades_per_tick"]):
             # Allow the central bank to do Quantitative Easing ####################################################
             if qe_tick in range(parameters["qe_start"], parameters["qe_end"]):
-                print('QE TIME = ', qe_tick)
                 # Cancel any active orders
                 for i, ob in enumerate(orderbooks):
                     if central_bank.var.active_orders[i]:
@@ -134,11 +133,17 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                         trader.var.weight_random[-1] * noise_components[i])
                     fcast_prices.append(mid_prices[i] * np.exp(trader.exp.returns[a]))
 
-                observed_returns = [ob.returns[-trader.par.horizon:] for ob in orderbooks]
+                observed_returns = []
+                for ob in orderbooks:
+                    obs_rets = ob.returns[-trader.par.horizon:]
+                    if sum(np.abs(obs_rets)) > 0:
+                        observed_returns.append(obs_rets)
+                    else:
+                        observed_returns.append(np.diff(ob.fundamental)[-trader.par.horizon:])
 
                 trader.var.covariance_matrix = calculate_covariance_matrix(observed_returns, parameters) #TODo debug, does this work as intended?
 
-                # employ portfolio optimization algo
+                # employ portfolio optimization algo TODO if observed returns 0 (replace with stdev fundamental?
                 ideal_trader_weights = portfolio_optimization(trader, tick) #TODO debug, does this still work as intended
 
                 # Determine price and volume
@@ -165,8 +170,6 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                     if matched_orders is None:
                         break
                     # execute trade
-                    if matched_orders[2].owner == central_bank or matched_orders[3].owner == central_bank:
-                        print('hold your horses QE is working')
                     matched_orders[3].owner.sell(matched_orders[1], matched_orders[0] * matched_orders[1], i, qe_tick)
                     matched_orders[2].owner.buy(matched_orders[1], matched_orders[0] * matched_orders[1], i, qe_tick)
 
