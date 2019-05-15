@@ -173,17 +173,6 @@ def confidence_interval(data, av):
     sigma = sample_stdev/math.sqrt(len(data))
     return stats.t.interval(alpha = 0.95, df= 24, loc=av, scale=sigma)
 
-#
-# def ornstein_uhlenbeck_evolve(init_level, average_level, sigma, mean_reversion, seed):
-#     random.seed(seed)
-#     np.random.seed(seed)
-#     error = np.random.normal(0, sigma)
-#     next_level = np.exp(np.log((init_level) + error + mean_reversion * (np.log(average_level) - np.log(init_level))))
-#     if (next_level <= 0) or (np.isnan(next_level)):
-#         return init_level
-#     else:
-#         return next_level
-
 
 def ornstein_uhlenbeck_evolve(init_level, previous_level, sigma, mean_reversion, seed):
     fundamental_value = [previous_level]

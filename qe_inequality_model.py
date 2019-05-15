@@ -59,24 +59,24 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
         # allow for multiple trades in one day
         for turn in range(parameters["trades_per_tick"]):
             # Allow the central bank to do Quantitative Easing ####################################################
-            if qe_tick in range(parameters["qe_start"], parameters["qe_end"]):
-                # Cancel any active orders
-                for i, ob in enumerate(orderbooks):
-                    if central_bank.var.active_orders[i]:
-                        for order in central_bank.var.active_orders[i]:
-                            ob.cancel_order(order)
-                            central_bank.var.active_orders[i] = []
+            #if qe_tick in range(parameters["qe_start"], parameters["qe_end"]):
+            # Cancel any active orders
+            for i, ob in enumerate(orderbooks):
+                if central_bank.var.active_orders[i]:
+                    for order in central_bank.var.active_orders[i]:
+                        ob.cancel_order(order)
+                        central_bank.var.active_orders[i] = []
 
-                # determine demand
-                cb_demand = int(central_bank.var.asset_target[qe_tick] - central_bank.var.assets[parameters["qe_asset_index"]][qe_tick])
+            # determine demand
+            cb_demand = int(central_bank.var.asset_target[qe_tick] - central_bank.var.assets[parameters["qe_asset_index"]][qe_tick])
 
-                # Submit QE orders:
-                if cb_demand > 0:
-                    bid = orderbooks[parameters["qe_asset_index"]].add_bid(orderbooks[parameters["qe_asset_index"]].lowest_ask_price, cb_demand, central_bank)
-                    central_bank.var.active_orders[parameters["qe_asset_index"]].append(bid)
-                elif cb_demand < 0:
-                    ask = orderbooks[parameters["qe_asset_index"]].add_ask(orderbooks[parameters["qe_asset_index"]].highest_bid_price, cb_demand, central_bank)
-                    central_bank.var.active_orders[parameters["qe_asset_index"]].append(ask)
+            # Submit QE orders:
+            if cb_demand > 0:
+                bid = orderbooks[parameters["qe_asset_index"]].add_bid(orderbooks[parameters["qe_asset_index"]].lowest_ask_price, cb_demand, central_bank)
+                central_bank.var.active_orders[parameters["qe_asset_index"]].append(bid)
+            elif cb_demand < 0:
+                ask = orderbooks[parameters["qe_asset_index"]].add_ask(orderbooks[parameters["qe_asset_index"]].highest_bid_price, cb_demand, central_bank)
+                central_bank.var.active_orders[parameters["qe_asset_index"]].append(ask)
 
             # END QE ##############################################################################################
 
