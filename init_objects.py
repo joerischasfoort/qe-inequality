@@ -56,7 +56,7 @@ def init_objects_qe_ineq(parameters, seed):
                                    init_money, init_stocks, init_covariance_matrix,
                                    parameters['fundamental_values'], init_active_orders)
 
-        # determine heterogeneous horizon and risk aversion based on
+        # determine heterogeneous horizon and risk aversion
         individual_horizon = np.random.randint(10, parameters['horizon'])
 
         individual_risk_aversion = abs(np.random.normal(parameters["base_risk_aversion"], parameters["base_risk_aversion"] / 5.0))

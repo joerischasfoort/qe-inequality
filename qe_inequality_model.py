@@ -149,8 +149,9 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                 # Determine price and volume
                 for i, ob in enumerate(orderbooks):
                     trader_price = np.random.normal(fcast_prices[i], trader.par.spread)
-                    position_change = (ideal_trader_weights[assets[i]] * (trader.var.assets[i][-1] * trader_price + trader.var.money[-1])
-                              ) - (trader.var.assets[i][-1] * trader_price)
+                    position_change = (ideal_trader_weights[assets[i]] * (
+                                trader.var.assets[i][-1] * trader_price + trader.var.money[-1])) - (
+                                                  trader.var.assets[i][-1] * trader_price)
                     volume = int(div0(position_change, trader_price))
 
                     # Trade:
