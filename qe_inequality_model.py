@@ -30,6 +30,8 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
         if tick == parameters['horizon'] + 1:
             print('Start of simulation ', seed)
 
+        print(tick)
+
         # update money and stocks history for agents
         for trader in traders:
             trader.var.money.append(trader.var.money[-1])

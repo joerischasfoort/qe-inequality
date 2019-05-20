@@ -45,11 +45,14 @@ def portfolio_optimization(trader, day):
     o_aux_y = aux_y.copy()
     o_aux_cov = aux_cov.copy()
 
-    kt_count =0
-    test_KT = np.zeros(len(aux_x)-1)
+    kt_count = 0
+    test_KT = np.zeros(len(aux_x) - 1)
     while sum(test_KT) != len(test_KT):
         if kt_count > (len(aux_x)-1):
-            print("day ", day)
+            print("portfolio optimization failed on day ", day)
+            # TODO add this ... later in opt
+            #weights = portfolio_optimization(trader)
+            break
 
         # compute matrix inverse
         try:
@@ -65,10 +68,10 @@ def portfolio_optimization(trader, day):
         weights = aux_c + aux_d
 
         # Start of algorithm that takes out shorted assets
-        test = weights[:-1] < 0
+        test = weights[:-1] < -1e-10
 
         while sum(test) > 0:
-            for i in range(len(aux_cov)-1):
+            for i in range(len(aux_cov) - 1):
                 for j in range(len(aux_cov)):
                     if weights[i] < 0 and i != j:
                         aux_cov[i, j] = 0
@@ -85,7 +88,7 @@ def portfolio_optimization(trader, day):
             aux_d = np.matmul(inv_aux_cov, aux_y)
 
             weights = aux_c + aux_d
-            test = weights[:-1] < 0
+            test = weights[:-1] < -1e-10
 
         aux_e = np.zeros(len(aux_c) - 1)
         aux_f = np.zeros(len(aux_c) - 1)
@@ -99,10 +102,11 @@ def portfolio_optimization(trader, day):
                 test_KT[i] = 1
             else:
                 test_KT[i] = aux_kt_pd[i] <= sys.float_info.epsilon
+
         # if Kuhn-Tucker conditions are not fulfilled put the asset with the highest partial derivative (marginal utility) back
         if sum(test_KT) < len(test_KT):
             kt_count = kt_count + 1
-            test_KT_inv = 1-test_KT
+            test_KT_inv = 1 - test_KT
             aux2_KT_pd = aux_kt_pd * test_KT_inv
             aux2_KT_pd = aux2_KT_pd.tolist()
             max_pd = max(aux2_KT_pd)
@@ -113,7 +117,6 @@ def portfolio_optimization(trader, day):
                 for j in range(len(aux_cov)):
                     aux_cov[i, j] = o_aux_cov[i, j]
 
-    # change here the output to a list of two weights (stocks, cash)
     output = {}
 
     for i, a in enumerate(covariance_assets.columns.values):
