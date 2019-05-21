@@ -16,15 +16,17 @@ parameters = {"fundamental_values": [105, 166], "asset_types": ['stock', 'stock'
               "trades_per_tick": 3, "mutation_intensity": 0.0477,
               "average_learning_ability": 0.02, 'money_multiplier': 1.0,
               "bond_mean_reversion": 0.0,
-              "qe_perc_size": 0.48, "qe_start": 200, "qe_end": 1462, "qe_asset_index": 0}
+              "qe_perc_size": 0.62, "qe_start": 200, "qe_end": 1462, "qe_asset_index": 0}
 
 
-seed = 3
+for seed in range(0, 3):
+    # 2 initialise model objects
+    traders, central_bank, orderbook = init_objects_qe_ineq(parameters, seed)
 
-# 2 initialise model objects
-traders, central_bank, orderbook = init_objects_qe_ineq(parameters, seed)
+    # 3 simulate model
+    traders, central_bank, orderbook = qe_ineq_model(traders, central_bank, orderbook, parameters, seed)
 
-# 3 simulate model
-traders, central_bank, orderbook = qe_ineq_model(traders, central_bank, orderbook, parameters, seed)
+    print("The simulations took", time.time() - start_time, "to run")
 
-print("The simulations took", time.time() - start_time, "to run")
+#seed = 3
+
