@@ -77,7 +77,7 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                 bid = orderbooks[parameters["qe_asset_index"]].add_bid(orderbooks[parameters["qe_asset_index"]].lowest_ask_price, cb_demand, central_bank)
                 central_bank.var.active_orders[parameters["qe_asset_index"]].append(bid)
             elif cb_demand < 0:
-                ask = orderbooks[parameters["qe_asset_index"]].add_ask(orderbooks[parameters["qe_asset_index"]].highest_bid_price, cb_demand, central_bank)
+                ask = orderbooks[parameters["qe_asset_index"]].add_ask(orderbooks[parameters["qe_asset_index"]].highest_bid_price, -cb_demand, central_bank)
                 central_bank.var.active_orders[parameters["qe_asset_index"]].append(ask)
 
             # END QE ##############################################################################################
@@ -198,7 +198,6 @@ def qe_ineq_active_cb_model(traders, central_bank, orderbooks, parameters, seed=
     assets = [parameters["asset_types"][a] + str(a) for a in range(len(parameters["fundamental_values"]))]
 
     fundamentals = [[val] for val in parameters["fundamental_values"]]
-    central_bank.var.asset_target = parameters['cb_asset_target']
 
     for idx, ob in enumerate(orderbooks):
         ob.tick_close_price.append(fundamentals[idx][-1])
@@ -210,6 +209,8 @@ def qe_ineq_active_cb_model(traders, central_bank, orderbooks, parameters, seed=
 
         if tick == parameters['horizon'] + 1:
             print('Start of simulation ', seed)
+
+        print(tick)
 
         # update money and stocks history for agents
         for trader in traders:
@@ -225,6 +226,7 @@ def qe_ineq_active_cb_model(traders, central_bank, orderbooks, parameters, seed=
 
         # update money and assets for central bank
         central_bank.var.assets[parameters["qe_asset_index"]][qe_tick] = central_bank.var.assets[parameters["qe_asset_index"]][qe_tick - 1]
+        central_bank.var.asset_target[qe_tick] = central_bank.var.asset_target[qe_tick - 1]
         central_bank.var.currency[qe_tick] = central_bank.var.currency[qe_tick - 1]
 
         # sort the traders by wealth to
@@ -237,13 +239,9 @@ def qe_ineq_active_cb_model(traders, central_bank, orderbooks, parameters, seed=
             else:
                 f.append(max(f[-1] + parameters["std_fundamentals"][i] * np.random.randn(), 0.1))
 
-        mid_prices = [np.mean([ob.highest_bid_price, ob.lowest_ask_price]) for ob in orderbooks]
-
         # allow for multiple trades in one day
         for turn in range(parameters["trades_per_tick"]):
             # Allow the central bank to do Quantitative Easing ####################################################
-            # TODO add active CB The CB buys assets if the PF out of target band
-            # Cancel any active orders
             for i, ob in enumerate(orderbooks):
                 if central_bank.var.active_orders[i]:
                     for order in central_bank.var.active_orders[i]:
@@ -251,23 +249,29 @@ def qe_ineq_active_cb_model(traders, central_bank, orderbooks, parameters, seed=
                         central_bank.var.active_orders[i] = []
 
             # calculate PF ratio
-            pf = mid_prices[tick] / f[-1]
-            if pf > 1 + parameters['cb_pf_range'] and central_bank.var.assets[parameters["qe_asset_index"]][qe_tick] > 0:
+            mid_prices = [np.mean([ob.highest_bid_price, ob.lowest_ask_price]) for ob in orderbooks]
+
+            pf = mid_prices[parameters["qe_asset_index"]] / fundamentals[parameters["qe_asset_index"]][-1]
+            # if pf is too high, decrease asset target otherwise increase asset target
+            quantity_available = int(central_bank.var.assets[parameters["qe_asset_index"]][qe_tick] * parameters['cb_size'])
+            if pf > 1 + parameters['cb_pf_range']: #  and central_bank.var.assets[parameters["qe_asset_index"]][qe_tick] >= parameters['cb_size']
                 # sell assets
-                central_bank.var.asset_target[qe_tick] -= parameters['cb_size']
-            elif pf < 1 + parameters['cb_pf_range']:
+                central_bank.var.asset_target[qe_tick] -= quantity_available
+                central_bank.var.asset_target[qe_tick] = max(central_bank.var.asset_target[qe_tick], 0)
+            elif pf < 1 - parameters['cb_pf_range']:
                 # buy assets
-                central_bank.var.asset_target[qe_tick] += parameters['cb_size']
+                central_bank.var.asset_target[qe_tick] += quantity_available
 
             # determine demand
-            cb_demand = int(central_bank.var.asset_target - central_bank.var.assets[parameters["qe_asset_index"]][qe_tick])
+            cb_demand = int(
+                central_bank.var.asset_target[qe_tick] - central_bank.var.assets[parameters["qe_asset_index"]][qe_tick])
 
             # Submit QE orders:
             if cb_demand > 0:
                 bid = orderbooks[parameters["qe_asset_index"]].add_bid(orderbooks[parameters["qe_asset_index"]].lowest_ask_price, cb_demand, central_bank)
                 central_bank.var.active_orders[parameters["qe_asset_index"]].append(bid)
             elif cb_demand < 0:
-                ask = orderbooks[parameters["qe_asset_index"]].add_ask(orderbooks[parameters["qe_asset_index"]].highest_bid_price, cb_demand, central_bank)
+                ask = orderbooks[parameters["qe_asset_index"]].add_ask(orderbooks[parameters["qe_asset_index"]].highest_bid_price, -cb_demand, central_bank)
                 central_bank.var.active_orders[parameters["qe_asset_index"]].append(ask)
 
             # END QE ##############################################################################################
@@ -275,11 +279,10 @@ def qe_ineq_active_cb_model(traders, central_bank, orderbooks, parameters, seed=
             # select random sample of active traders
             active_traders = random.sample(traders, int((parameters['trader_sample_size'])))
 
-            fundamental_components = [np.log(fundamentals[i][-1] / mid_prices[i]) for i in range(len(assets))]
-
             for i, ob in enumerate(orderbooks):
                 ob.returns[-1] = (mid_prices[i] - ob.tick_close_price[-2]) / ob.tick_close_price[-2]
 
+            fundamental_components = [np.log(fundamentals[i][-1] / mid_prices[i]) for i in range(len(assets))]
             chartist_components = [np.cumsum(ob.returns[:-len(ob.returns) - 1:-1]
                                              ) / np.arange(1., float(len(ob.returns) + 1)) for ob in orderbooks]
 
@@ -340,8 +343,9 @@ def qe_ineq_active_cb_model(traders, central_bank, orderbooks, parameters, seed=
                 # Determine price and volume
                 for i, ob in enumerate(orderbooks):
                     trader_price = np.random.normal(fcast_prices[i], trader.par.spread)
-                    position_change = (ideal_trader_weights[assets[i]] * (trader.var.assets[i][-1] * trader_price + trader.var.money[-1])
-                              ) - (trader.var.assets[i][-1] * trader_price)
+                    position_change = (ideal_trader_weights[assets[i]] * (
+                                trader.var.assets[i][-1] * trader_price + trader.var.money[-1])) - (
+                                                  trader.var.assets[i][-1] * trader_price)
                     volume = int(div0(position_change, trader_price))
 
                     # Trade:
