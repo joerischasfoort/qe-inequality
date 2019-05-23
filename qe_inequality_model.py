@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from functions.portfolio_optimization import *
-from functions.helpers import calculate_covariance_matrix, div0, ornstein_uhlenbeck_evolve
+from functions.helpers import calculate_covariance_matrix, div0, ornstein_uhlenbeck_evolve, npv
 
 
 def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
@@ -16,8 +16,24 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
     random.seed(seed)
     np.random.seed(seed)
     assets = [parameters["asset_types"][a] + str(a) for a in range(len(parameters["fundamental_values"]))]
+    simtime = (parameters["ticks"] + parameters['horizon'] + 1)
 
-    fundamentals = [[val] for val in parameters["fundamental_values"]]
+    # TODO new, possible remove if it does not work
+    cash_flows = [[val / 100.0] for val in parameters["fundamental_values"]]
+    # evolve cash flows fundamental value via random walk process
+    for t in range(parameters["ticks"] * 2):
+        for i, c in enumerate(cash_flows):
+            if 'bond' in assets[i]:
+                c.append(max(
+                    ornstein_uhlenbeck_evolve(parameters["fundamental_values"][i] / 100.0, c[-1], parameters["std_fundamentals"][i],
+                                              parameters['bond_mean_reversion'], seed), 0.1))
+            else:
+                c.append(max(c[-1] + parameters["std_fundamentals"][i] * np.random.randn(), 0.1))
+
+    #f_val_cash_flows = [[npv(cash_flows[i][t:t + parameters["ticks"]], 0.01) for t in range(parameters["ticks"])] for i in range(len(cash_flows))]
+    fundamentals = [[npv(cash_flows[i][:parameters["ticks"]], 0.01)] for i in range(len(cash_flows))]
+
+    #fundamentals = [[val] for val in parameters["fundamental_values"]]
 
     for idx, ob in enumerate(orderbooks):
         ob.tick_close_price.append(fundamentals[idx][-1])
@@ -54,9 +70,11 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
         # evolve the fundamental value via random walk process
         for i, f in enumerate(fundamentals):
             if 'bond' in assets[i]:
-                f.append(max(ornstein_uhlenbeck_evolve(parameters["fundamental_values"][i], f[-1], parameters["std_fundamentals"][i], parameters['bond_mean_reversion'], seed), 0.1))
+                print('error bond not supported yet')
+                #f.append(max(ornstein_uhlenbeck_evolve(parameters["fundamental_values"][i], f[-1], parameters["std_fundamentals"][i], parameters['bond_mean_reversion'], seed), 0.1))
             else:
-                f.append(max(f[-1] + parameters["std_fundamentals"][i] * np.random.randn(), 0.1))
+                #f.append(max(f[-1] + parameters["std_fundamentals"][i] * np.random.randn(), 0.1))
+                f.append(max(npv(cash_flows[i][qe_tick:qe_tick + parameters["ticks"]], 0.01), 0.1)) #TODO insert params risk free rate
 
         # allow for multiple trades in one day
         for turn in range(parameters["trades_per_tick"]):
@@ -275,7 +293,7 @@ def qe_ineq_active_cb_model(traders, central_bank, orderbooks, parameters, seed=
                 central_bank.var.active_orders[parameters["qe_asset_index"]].append(ask)
 
             # END QE ##############################################################################################
-
+            #mid_prices = [np.mean([ob.highest_bid_price, ob.lowest_ask_price]) for ob in orderbooks]
             # select random sample of active traders
             active_traders = random.sample(traders, int((parameters['trader_sample_size'])))
 
