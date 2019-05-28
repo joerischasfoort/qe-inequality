@@ -30,12 +30,8 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
             else:
                 c.append(max(c[-1] + parameters["std_fundamentals"][i] * np.random.randn(), 0.1))
 
-    # store cash flows in orderbooks
-    for i, c in enumerate(cash_flows):
-        orderbooks[i].cash_flows = c
-
     #f_val_cash_flows = [[npv(cash_flows[i][t:t + parameters["ticks"]], 0.01) for t in range(parameters["ticks"])] for i in range(len(cash_flows))]
-    fundamentals = [[npv(cash_flows[i][:parameters["ticks"]], parameters['discount_rates'][i])] for i in range(len(cash_flows))]
+    fundamentals = [[npv(cash_flows[i][:parameters["ticks"]], 0.01)] for i in range(len(cash_flows))]
 
     #fundamentals = [[val] for val in parameters["fundamental_values"]]
 
@@ -78,7 +74,7 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
                 #f.append(max(ornstein_uhlenbeck_evolve(parameters["fundamental_values"][i], f[-1], parameters["std_fundamentals"][i], parameters['bond_mean_reversion'], seed), 0.1))
             else:
                 #f.append(max(f[-1] + parameters["std_fundamentals"][i] * np.random.randn(), 0.1))
-                f.append(max(npv(cash_flows[i][qe_tick:qe_tick + parameters["ticks"]], parameters['discount_rates'][i]), 0.1)) #TODO insert params risk free rate
+                f.append(max(npv(cash_flows[i][qe_tick:qe_tick + parameters["ticks"]], 0.01), 0.1)) #TODO insert params risk free rate
 
         # allow for multiple trades in one day
         for turn in range(parameters["trades_per_tick"]):

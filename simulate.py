@@ -13,7 +13,7 @@ parameters = {"fundamental_values": [105, 166], "asset_types": ['stock', 'stock'
               "init_assets": [740, 260], "base_risk_aversion": 4.051,
               'spread_max': 0.004, "horizon": 200,
               "fundamentalist_horizon_multiplier": 2.2,
-              "trades_per_tick": 3, "mutation_intensity": 0.0477, 'discount_rates': [0.01, 0.01],
+              "trades_per_tick": 3, "mutation_intensity": 0.0477,
               "average_learning_ability": 0.02, 'money_multiplier': 1.0,
               "bond_mean_reversion": 0.0,
               "qe_perc_size": 0.62, "qe_start": 200, "qe_end": 1462, "qe_asset_index": 0}
