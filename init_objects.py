@@ -170,14 +170,12 @@ def init_objects_active_cb(parameters, seed):
         traders.append(Trader(idx, lft_vars, lft_params, lft_expectations))
 
     # initialize central bank with assets at target
-    asset_target_cb = int(parameters["qe_perc_size"] * total_buy_able_assets)
+    asset_target_cb = parameters["qe_perc_size"] * total_buy_able_assets
 
-    cb_assets = [[0 for t in range(parameters["ticks"])] for i in range(len(assets))]
-    cb_assets[parameters['qe_asset_index']] = [asset_target_cb for t in range(parameters['ticks'])]
-
+    cb_assets = [[asset_target_cb for t in range(parameters["ticks"])] for i in range(len(assets))]
     currency = np.zeros(parameters["ticks"])
     for idx, asset in enumerate(assets):
-        currency -= np.array(cb_assets[idx]) * parameters["fundamental_values"][idx]
+        currency += np.array(cb_assets[idx])
 
     asset_demand = [0 for a in assets]
     asset_target = [asset_target_cb for t in range(parameters['ticks'])]

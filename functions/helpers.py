@@ -183,17 +183,3 @@ def ornstein_uhlenbeck_evolve(init_level, previous_level, sigma, mean_reversion,
         new_dr = fundamental_value[-1]
 
     return new_dr
-
-
-def npv(cash_flows, discount_rate):
-    """
-    Calculate the net present value of a
-    :param cash_flows: list of cash flows
-    :param discount_rate: the interest rate at which the cash flows are discounted
-    :return:
-    """
-    npv = 0
-    for t in (range(len(cash_flows))):
-        npv += cash_flows[t] / (1 + discount_rate) ** t
-
-    return npv
