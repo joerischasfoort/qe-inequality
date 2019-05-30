@@ -61,7 +61,6 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
         # allow for multiple trades in one day
         for turn in range(parameters["trades_per_tick"]):
             # Allow the central bank to do Quantitative Easing ####################################################
-            #if qe_tick in range(parameters["qe_start"], parameters["qe_end"]):
             # Cancel any active orders
             for i, ob in enumerate(orderbooks):
                 if central_bank.var.active_orders[i]:

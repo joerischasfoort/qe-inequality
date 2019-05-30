@@ -16,7 +16,7 @@ parameters = {"fundamental_values": [105, 166], "asset_types": ['stock', 'stock'
               "trades_per_tick": 3, "mutation_intensity": 0.0477,
               "average_learning_ability": 0.02, 'money_multiplier': 1.0,
               "bond_mean_reversion": 0.0,
-              "qe_perc_size": 0.62, "qe_start": 200, "qe_end": 1462, "qe_asset_index": 0}
+              "qe_perc_size": -0.62, "qe_start": 2, "qe_end": 300, "qe_asset_index": 0}
 
 
 seed = 0

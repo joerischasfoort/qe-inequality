@@ -19,7 +19,8 @@ class CentralBank:
         :return: -
         """
         if self.var.assets[asset_index][-1] < amount:
-            raise ValueError("not enough stocks to sell this amount")
+            #raise ValueError("not enough stocks to sell this amount")
+            print('CB is technically creating assets to do QT')
         self.var.assets[asset_index][t] -= amount
         self.var.currency[t] += price
 
