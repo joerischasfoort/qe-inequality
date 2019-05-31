@@ -183,12 +183,13 @@ def qe_ineq_model(traders, central_bank, orderbooks, parameters, seed=1):
     return traders, central_bank, orderbooks
 
 
-def qe_ineq_active_cb_model(traders, central_bank, orderbooks, parameters, seed=1):
+def qe_ineq_active_cb_model(traders, central_bank, orderbooks, parameters, seed=1, scenario=None,):
     """
     The main model function of distribution model where trader stocks are tracked.
     :param traders: list of Agent objects
     :param orderbook: object Order book
     :param parameters: dictionary of parameters
+    :param scenario: can be the following strings: BUSTQE, BUSTQT, BOOMQE, BOOMQT
     :param seed: integer seed to initialise the random number generators
     :return: list of simulated Agent objects, object simulated Order book
     """
@@ -252,14 +253,38 @@ def qe_ineq_active_cb_model(traders, central_bank, orderbooks, parameters, seed=
 
             pf = mid_prices[parameters["qe_asset_index"]] / fundamentals[parameters["qe_asset_index"]][-1]
             # if pf is too high, decrease asset target otherwise increase asset target
-            quantity_available = int(central_bank.var.assets[parameters["qe_asset_index"]][qe_tick] * parameters['cb_size'])
-            if pf > 1 + parameters['cb_pf_range']: #  and central_bank.var.assets[parameters["qe_asset_index"]][qe_tick] >= parameters['cb_size']
-                # sell assets
-                central_bank.var.asset_target[qe_tick] -= quantity_available
-                central_bank.var.asset_target[qe_tick] = max(central_bank.var.asset_target[qe_tick], 0)
-            elif pf < 1 - parameters['cb_pf_range']:
-                # buy assets
-                central_bank.var.asset_target[qe_tick] += quantity_available
+            quantity_available = int(
+                central_bank.var.assets[parameters["qe_asset_index"]][qe_tick] * parameters['cb_size'])
+
+            if scenario == 'BUSTQE':
+                if pf < 1 - parameters['cb_pf_range']:
+                    # buy assets
+                    central_bank.var.asset_target[qe_tick] += quantity_available
+            elif scenario == 'BUSTQT':
+                if pf < 1 - parameters['cb_pf_range']:
+                    # sell assets
+                    central_bank.var.asset_target[qe_tick] -= quantity_available
+                    central_bank.var.asset_target[qe_tick] = max(central_bank.var.asset_target[qe_tick], 0)
+
+            elif scenario == 'BOOMQE':
+                if pf > 1 + parameters['cb_pf_range']:
+                    # buy assets
+                    central_bank.var.asset_target[qe_tick] += quantity_available
+
+            elif scenario == 'BOOMQT':
+                if pf > 1 + parameters['cb_pf_range']:
+                    # sell assets
+                    central_bank.var.asset_target[qe_tick] -= quantity_available
+                    central_bank.var.asset_target[qe_tick] = max(central_bank.var.asset_target[qe_tick], 0)
+
+            elif scenario == 'BLR':
+                if pf > 1 + parameters['cb_pf_range']:
+                    # sell assets
+                    central_bank.var.asset_target[qe_tick] -= quantity_available
+                    central_bank.var.asset_target[qe_tick] = max(central_bank.var.asset_target[qe_tick], 0)
+                elif pf < 1 - parameters['cb_pf_range']:
+                    # buy assets
+                    central_bank.var.asset_target[qe_tick] += quantity_available
 
             # determine demand
             cb_demand = int(
